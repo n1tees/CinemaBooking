@@ -154,3 +154,8 @@ type BonusHistory struct {
 	Operation BonusOperation `gorm:"type:varchar(20);not null"`
 	CreatedAt time.Time
 }
+
+type FilmGenre struct {
+	FilmID  uint `gorm:"primaryKey"`
+	GenreID uint `gorm:"primaryKey"`
+}
