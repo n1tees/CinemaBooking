@@ -24,13 +24,13 @@ func InitDB() {
 	}
 	log.Println("Успешное подключение к базе данных, подготовка к выполнению миграции")
 
-	// if err := Migrate(db); err != nil {
-	// 	log.Fatalf("Ошибка миграции базы данных: %v", err)
-	// }
+	if err := Migrate(db); err != nil {
+		log.Fatalf("Ошибка миграции базы данных: %v", err)
+	}
 
 	DB = db
 	log.Println("Пропуск миграций, не забыть вернуть")
-	// log.Println("Успешное выполнение миграций")
+	log.Println("Успешное выполнение миграций")
 }
 
 func CloseDB() {
@@ -56,7 +56,8 @@ func Migrate(db *gorm.DB) error {
 		&models.Genre{},
 		&models.Film{},
 		&models.Poster{},
-		&models.FilmGenre{}, // промежуточная таблица many2many
+		&models.FilmGenre{},
+		&models.Review{},
 
 		&models.Session{},
 		&models.Booking{},

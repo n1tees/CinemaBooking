@@ -159,3 +159,13 @@ type FilmGenre struct {
 	FilmID  uint `gorm:"primaryKey"`
 	GenreID uint `gorm:"primaryKey"`
 }
+
+type Review struct {
+	gorm.Model
+	FilmID uint
+	Film   Film
+	UserID uint
+	User   User
+	Rating uint
+	Coment string `gorm:"type:varchar(100)"`
+}
