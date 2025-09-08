@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -29,6 +30,21 @@ const (
 	BonusRedeem BonusOperation = "redeem"
 )
 
+type UserType string
+
+const (
+	Customer UserType = "customer"
+	Admin    UserType = "admin"
+)
+
+type ReviewStatus string
+
+const (
+	ReviewPending  ReviewStatus = "pending"  // отправлен на проверку
+	ReviewApproved ReviewStatus = "approved" // опубликован
+	ReviewRejected ReviewStatus = "rejected" // отменен
+)
+
 // Пользователи и авторизация
 type AuthCredential struct {
 	gorm.Model
@@ -53,6 +69,7 @@ type User struct {
 	Auth      AuthCredential
 	ProfileID uint
 	Profile   Profile
+	UserType  UserType `gorm:"type:varchar(25);not null"`
 }
 
 // Кинотеатры и залы
@@ -78,14 +95,7 @@ type CinemaHall struct {
 	HallType   HallType
 	Name       string `gorm:"type:varchar(50);not null"`
 	Capacity   uint
-}
-
-type HallSeat struct {
-	gorm.Model
-	HallID uint
-	Hall   CinemaHall
-	Row    uint
-	Seat   uint
+	Structure  datatypes.JSON `gorm:"type:jsonb"`
 }
 
 // Фильмы
@@ -116,24 +126,32 @@ type Poster struct {
 // Сеансы и бронирование
 type Session struct {
 	gorm.Model
-	FilmID    uint
+	FilmID    uint `gorm:"not null"`
 	Film      Film
-	HallID    uint
+	HallID    uint `gorm:"not null"`
 	Hall      CinemaHall
-	StartTime time.Time
-	Price     float64 `gorm:"type:numeric(12,2)"`
-	Bookings  []Booking
+	StartTime time.Time `gorm:"not null"`
+	Price     float64   `gorm:"type:numeric(12,2);not null"`
+	CreatedAt time.Time
 }
 
 type Booking struct {
-	gorm.Model
-	SeatID     uint
-	Seat       HallSeat
-	CustomerID uint
-	Customer   User
-	SessionID  uint
+	ID         uint `gorm:"primaryKey"`
+	SessionID  uint `gorm:"not null"`
 	Session    Session
-	Status     BookingStatus `gorm:"type:varchar(20);not null"`
+	CustomerID uint `gorm:"not null"`
+	Customer   User
+
+	RowNum  uint `gorm:"not null"` // номер ряда
+	SeatNum uint `gorm:"not null"` // номер места
+
+	SpendBonus    float64 `gorm:"type:numeric(12,2);default:0"`
+	ReceivedBonus float64 `gorm:"type:numeric(12,2);default:0"`
+	TotalPrice    float64 `gorm:"type:numeric(12,2);not null"`
+
+	Status BookingStatus `gorm:"type:varchar(20);not null"`
+
+	CreatedAt time.Time
 }
 
 // Финансы
@@ -162,10 +180,12 @@ type FilmGenre struct {
 
 type Review struct {
 	gorm.Model
-	FilmID uint
-	Film   Film
-	UserID uint
-	User   User
-	Rating uint
-	Coment string `gorm:"type:varchar(100)"`
+	FilmID    uint
+	Film      Film
+	UserID    uint
+	User      User
+	Rating    uint
+	Coment    string `gorm:"type:varchar(100)"`
+	CreatedAt time.Time
+	Status    ReviewStatus `gorm:"type:varchar(20);not null;default:'pending'"`
 }

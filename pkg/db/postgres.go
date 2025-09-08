@@ -51,7 +51,6 @@ func Migrate(db *gorm.DB) error {
 		&models.Cinema{},
 		&models.HallType{},
 		&models.CinemaHall{},
-		&models.HallSeat{},
 
 		&models.Genre{},
 		&models.Film{},

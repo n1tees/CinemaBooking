@@ -3,6 +3,7 @@ package main
 import (
 	"CinemaBooking/config"
 	"CinemaBooking/pkg/db"
+	"CinemaBooking/pkg/middleware"
 	"time"
 
 	"github.com/gin-gonic/gin"
