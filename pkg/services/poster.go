@@ -3,6 +3,7 @@ package services
 import (
 	"CinemaBooking/pkg/db"
 	"CinemaBooking/pkg/models"
+	"errors"
 )
 
 // Посмотреть афиши
@@ -29,17 +30,18 @@ func CreatePoster(poster *models.Poster) error {
 }
 
 // Изменить афишу
-func UpdatePoster(id uint, newData models.Poster) error {
-
-	var poster models.Poster
-
-	// Проверяем, есть ли такая афиша
-	if err := db.DB.First(&poster, id).Error; err != nil {
-		return err
+func UpdatePoster(id uint, updates map[string]interface{}) error {
+	// Фильтруем значения
+	filtered := FilterUpdates(updates)
+	if len(filtered) == 0 {
+		return errors.New("пустой запрос на обновление")
 	}
 
-	if err := db.DB.Save(&newData).Error; err != nil {
-		return err
+	// Обновляем только нужные поля
+	if err := db.DB.Model(&models.Poster{}).
+		Where("id = ?", id).
+		Updates(filtered).Error; err != nil {
+		return errors.New("ошибка при обновлении афиши")
 	}
 
 	return nil

@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"time"
 
 	"CinemaBooking/pkg/db"
 	"CinemaBooking/pkg/models"
@@ -48,8 +47,8 @@ func AddBonus(userID uint, amount int, description string) error {
 		history := models.BonusHistory{
 			UserID:    userID,
 			Amount:    amount,
+			Desc:      description,
 			Operation: models.BonusEarn,
-			CreatedAt: time.Now(),
 		}
 		if err := tx.Create(&history).Error; err != nil {
 			return err
@@ -82,8 +81,8 @@ func SpendBonus(userID uint, amount int, description string) error {
 		history := models.BonusHistory{
 			UserID:    userID,
 			Amount:    -amount,
+			Desc:      description,
 			Operation: models.BonusRedeem,
-			CreatedAt: time.Now(),
 		}
 		if err := tx.Create(&history).Error; err != nil {
 			return err

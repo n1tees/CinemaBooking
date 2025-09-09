@@ -7,14 +7,12 @@ import (
 )
 
 // Получить конкретный фильм
-func GetFilm(id uint) (models.Film, error) {
+func GetFilm(id uint) (*models.Film, error) {
 	var film models.Film
-
 	if err := db.DB.Preload("Genres").Preload("Posters").First(&film, id).Error; err != nil {
-		return film, err
+		return nil, err
 	}
-
-	return film, nil
+	return &film, nil
 }
 
 // Получить все фильмы с фильтром по жанрам

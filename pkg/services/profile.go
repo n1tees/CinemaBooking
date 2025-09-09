@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm"
 
 	"errors"
-	"sync"
 )
 
 // Стуктура ввода для смены пароля
@@ -41,10 +40,6 @@ func GetUserInfo(userID uint) (*models.Profile, error) {
 
 // Изменить пароль
 func ChangePassword(userID uint, input ChangePasswordInput) error {
-
-	var mu sync.Mutex
-	mu.Lock()
-	defer mu.Unlock()
 
 	// Находим пользователя
 	user, err := searchUserByID(userID)
@@ -82,7 +77,6 @@ func ChangePassword(userID uint, input ChangePasswordInput) error {
 	return nil
 }
 
-// ____________________________________________________INTERNAL____________________________________________________
 // Частичное обновление пользователя
 func UpdateProfile(userID uint, updates map[string]interface{}) error {
 	user, err := searchUserByID(userID)
@@ -106,6 +100,7 @@ func UpdateProfile(userID uint, updates map[string]interface{}) error {
 	return nil
 }
 
+// ____________________________________________________INTERNAL____________________________________________________
 // поиск пользователя с заданными auth_credential
 func searchUserByAuth(auth *models.AuthCredential) (*models.User, error) {
 

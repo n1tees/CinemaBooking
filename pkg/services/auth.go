@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -17,7 +16,8 @@ import (
 
 // Структура данных для создания
 type RegisterInput struct {
-	FName          string    `json:"fname"`
+	FirstName      string    `json:"first name"`
+	SecondName     string    `json:"second name"`
 	Phone          string    `json:"phone"`
 	Email          string    `json:"email"`
 	BirthDay       string    `json:"birthday"`
@@ -51,11 +51,6 @@ func RegUser(input RegisterInput) (uint, error) {
 		return 0, errors.New("ошибка при хешировании пароля")
 	}
 
-	// Блокировка для защиты от гонок
-	var mu sync.Mutex
-	mu.Lock()
-	defer mu.Unlock()
-
 	var user models.User
 	// Начинаем транзакцию
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
@@ -71,9 +66,10 @@ func RegUser(input RegisterInput) (uint, error) {
 
 		// 2. Создаём Profile
 		profile := models.Profile{
-			FirstName: input.FName,
-			Phone:     input.Phone,
-			BirthDay:  input.ParsedBirthDay,
+			FirstName:  input.FirstName,
+			SecondName: input.SecondName,
+			Phone:      input.Phone,
+			BirthDay:   input.ParsedBirthDay,
 		}
 		if err := tx.Create(&profile).Error; err != nil {
 			return errors.New("ошибка создания профиля")
@@ -119,7 +115,7 @@ func LoginUser(input LoginInput) (string, error) {
 }
 
 // ____________________________________________________INTERNAL____________________________________________________
-// Генерация токена JWT стрингой
+// Генерация токена JWT
 func generateJWT(userID uint, userType models.UserType) (string, error) {
 
 	claims := jwt.MapClaims{

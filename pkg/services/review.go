@@ -3,8 +3,7 @@ package services
 import (
 	"CinemaBooking/pkg/db"
 	"CinemaBooking/pkg/models"
-	"fmt"
-	"time"
+	"errors"
 )
 
 // Получить отзывы по фильму
@@ -24,12 +23,19 @@ func GetReviewsByFilm(filmID uint) ([]models.Review, error) {
 // Добавить отзыв (уходит на модерацию)
 func AddReview(userID, filmID, rating uint, comment string) error {
 	review := models.Review{
-		FilmID:    filmID,
-		UserID:    userID,
-		Rating:    rating,
-		Coment:    comment,
-		Status:    models.ReviewPending,
-		CreatedAt: time.Now(),
+		FilmID: filmID,
+		UserID: userID,
+		Rating: rating,
+		Coment: comment,
+		Status: models.ReviewPending,
+	}
+
+	var count int64
+	db.DB.Model(&models.Review{}).
+		Where("film_id = ? AND user_id = ?", filmID, userID).
+		Count(&count)
+	if count > 0 {
+		return errors.New("вы уже оставили отзыв на этот фильм")
 	}
 
 	if err := db.DB.Create(&review).Error; err != nil {
@@ -40,21 +46,21 @@ func AddReview(userID, filmID, rating uint, comment string) error {
 }
 
 // Получить рейтинг фильма
-func GetFilmRating(filmID uint) (string, error) {
+func GetFilmRating(filmID uint) (*float64, error) {
 	var avgRating float64
 
 	if err := db.DB.Model(&models.Review{}).
 		Where("film_id = ? AND status = ?", filmID, models.ReviewApproved).
 		Select("AVG(rating)").
 		Scan(&avgRating).Error; err != nil {
-		return "-", err
+		return nil, err
 	}
 
 	if avgRating == 0 {
-		return "-", nil
+		return nil, nil // нет отзывов
 	}
 
-	return fmt.Sprintf("%.1f", avgRating), nil
+	return &avgRating, nil
 }
 
 // ____________________________________________________ADMIN_ONLY____________________________________________________

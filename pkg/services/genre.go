@@ -9,7 +9,7 @@ import (
 // Получить все жанры
 func GetAllGenres() ([]models.Genre, error) {
 	var genres []models.Genre
-	if err := db.DB.Find(&genres).Error; err != nil {
+	if err := db.DB.Order("name ASC").Find(&genres).Error; err != nil {
 		return nil, err
 	}
 	return genres, nil
@@ -18,6 +18,13 @@ func GetAllGenres() ([]models.Genre, error) {
 // ____________________________________________________ADMIN_ONLY____________________________________________________
 // Создать жанр
 func CreateGenre(genre *models.Genre) error {
+
+	var count int64
+	db.DB.Model(&models.Genre{}).Where("name = ?", genre.Name).Count(&count)
+	if count > 0 {
+		return errors.New("жанр с таким названием уже существует")
+	}
+
 	if err := db.DB.Create(genre).Error; err != nil {
 		return err
 	}

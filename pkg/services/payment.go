@@ -2,8 +2,6 @@ package services
 
 import (
 	"errors"
-	"sync"
-	"time"
 
 	"CinemaBooking/pkg/db"
 	"CinemaBooking/pkg/models"
@@ -27,11 +25,6 @@ func RefillMyBalance(userID uint, amount float64) error {
 	if amount <= 0 {
 		return errors.New("сумма пополнения должна быть больше нуля")
 	}
-
-	// Блокировка
-	var mu sync.Mutex
-	mu.Lock()
-	defer mu.Unlock()
 
 	// Транзакция
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
@@ -62,7 +55,7 @@ func RefillMyBalance(userID uint, amount float64) error {
 		payment := models.PaymentHistory{
 			UserID:    userID,
 			Amount:    amount,
-			CreatedAt: time.Now(),
+			Operation: models.PaymentDeposit,
 		}
 		if err := tx.Create(&payment).Error; err != nil {
 			return errors.New("ошибка при записи платежа")
@@ -118,6 +111,15 @@ func ChargeFromBalance(userID uint, amount float64) error {
 		profile.Balance -= amount
 		if err := tx.Save(&profile).Error; err != nil {
 			return errors.New("ошибка при списании средств с баланса")
+		}
+
+		payment := models.PaymentHistory{
+			UserID:    userID,
+			Amount:    -amount,
+			Operation: models.PaymentSpend,
+		}
+		if err := tx.Create(&payment).Error; err != nil {
+			return errors.New("ошибка при записи платежа")
 		}
 
 		return nil

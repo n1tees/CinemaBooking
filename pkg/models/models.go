@@ -118,7 +118,7 @@ type Film struct {
 
 type Poster struct {
 	gorm.Model
-	FilmID   uint
+	FilmID   uint `gorm:"not null;constraint:OnDelete:CASCADE;"`
 	Film     Film
 	ImageURL string `gorm:"type:varchar(100)"`
 }
@@ -132,7 +132,6 @@ type Session struct {
 	Hall      CinemaHall
 	StartTime time.Time `gorm:"not null"`
 	Price     float64   `gorm:"type:numeric(12,2);not null"`
-	CreatedAt time.Time
 }
 
 type Booking struct {
@@ -150,8 +149,6 @@ type Booking struct {
 	TotalPrice    float64 `gorm:"type:numeric(12,2);not null"`
 
 	Status BookingStatus `gorm:"type:varchar(20);not null"`
-
-	CreatedAt time.Time
 }
 
 // Финансы
@@ -160,8 +157,8 @@ type PaymentHistory struct {
 	UserID    uint
 	User      User
 	Amount    float64          `gorm:"type:numeric(12,2)"`
+	Desc      string           `gorm:"type:varchar(50)"`
 	Operation PaymentOperation `gorm:"type:varchar(20);not null"`
-	CreatedAt time.Time
 }
 
 type BonusHistory struct {
@@ -169,23 +166,22 @@ type BonusHistory struct {
 	UserID    uint
 	User      User
 	Amount    int
+	Desc      string         `gorm:"type:varchar(50)"`
 	Operation BonusOperation `gorm:"type:varchar(20);not null"`
-	CreatedAt time.Time
 }
 
 type FilmGenre struct {
-	FilmID  uint `gorm:"primaryKey"`
-	GenreID uint `gorm:"primaryKey"`
+	FilmID  uint `gorm:"primaryKey;constraint:OnDelete:CASCADE;"`
+	GenreID uint `gorm:"primaryKey;constraint:OnDelete:CASCADE;"`
 }
 
 type Review struct {
 	gorm.Model
-	FilmID    uint
-	Film      Film
-	UserID    uint
-	User      User
-	Rating    uint
-	Coment    string `gorm:"type:varchar(100)"`
-	CreatedAt time.Time
-	Status    ReviewStatus `gorm:"type:varchar(20);not null;default:'pending'"`
+	FilmID uint
+	Film   Film
+	UserID uint
+	User   User
+	Rating uint
+	Coment string       `gorm:"type:varchar(100)"`
+	Status ReviewStatus `gorm:"type:varchar(20);not null;default:'pending'"`
 }
