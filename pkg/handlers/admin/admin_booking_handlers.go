@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/services"
 
 	"github.com/gin-gonic/gin"
@@ -15,24 +16,30 @@ import (
 // @Security BearerAuth
 // @Produce json
 // @Param id path int true "ID бронирования"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Failure 401 {object} map[string]string
-// @Failure 403 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Success 200 {object} dt.ServAnswerDTO
+// @Failure 400 {object} dt.ErrorResponse
+// @Failure 401 {object} dt.ErrorResponse
+// @Failure 403 {object} dt.ErrorResponse
+// @Failure 404 {object} dt.ErrorResponse
+// @Failure 500 {object} dt.ErrorResponse
 // @Router /bookings/{id} [delete]
 func CancelBookingHandler(c *gin.Context) {
 	userID, ok := c.Get("user_id")
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found in context"})
+		c.JSON(http.StatusUnauthorized, dt.ErrorResponse{
+			Code:    "NOT_FOUND",
+			Message: "user_id not found",
+		})
 		return
 	}
 
 	idStr := c.Param("id")
 	bookingID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid booking ID"})
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "INVALID_INPUT",
+			Message: "invalid booking ID",
+		})
 		return
 	}
 
@@ -40,16 +47,30 @@ func CancelBookingHandler(c *gin.Context) {
 	if err != nil {
 		switch err.Error() {
 		case "бронирование не найдено":
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, dt.ErrorResponse{
+				Code:    "NOT_FOUND",
+				Message: err.Error(),
+			})
 		case "нельзя отменить чужое бронирование":
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			c.JSON(http.StatusForbidden, dt.ErrorResponse{
+				Code:    "FORBIDDEN",
+				Message: err.Error(),
+			})
 		case "бронирование нельзя отменить":
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+				Code:    "INVALID_STATE",
+				Message: err.Error(),
+			})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, dt.ErrorResponse{
+				Code:    "INTERNAL_ERROR",
+				Message: err.Error(),
+			})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "бронирование отменено"})
+	c.JSON(http.StatusOK, dt.ServAnswerDTO{
+		Answer: "бронирование отменено",
+	})
 }

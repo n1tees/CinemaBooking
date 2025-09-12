@@ -10,7 +10,7 @@ import (
 )
 
 // Получить текущий баланс бонусов
-func GetBonusBalance(userID uint) (int, error) {
+func GetBonusBalance(userID uint) (float64, error) {
 	var profile models.Profile
 	if err := db.DB.First(&profile, "id = ?", userID).Error; err != nil {
 		return 0, err
@@ -34,7 +34,7 @@ func GetBonusHistory(userID uint) ([]models.BonusHistory, error) {
 
 // ____________________________________________________INTERNAL____________________________________________________
 // Добавить бонусы
-func AddBonus(userID uint, amount int, description string) error {
+func AddBonus(userID uint, amount float64, description string) error {
 	return db.DB.Transaction(func(tx *gorm.DB) error {
 		// Обновляем баланс
 		if err := tx.Model(&models.Profile{}).
@@ -59,7 +59,7 @@ func AddBonus(userID uint, amount int, description string) error {
 }
 
 // Списать бонусы
-func SpendBonus(userID uint, amount int, description string) error {
+func SpendBonus(userID uint, amount float64, description string) error {
 	return db.DB.Transaction(func(tx *gorm.DB) error {
 		// Проверяем баланс
 		var profile models.Profile

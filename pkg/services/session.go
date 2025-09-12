@@ -2,6 +2,7 @@ package services
 
 import (
 	"CinemaBooking/pkg/db"
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/models"
 	"encoding/json"
 	"errors"
@@ -56,6 +57,7 @@ func GetSessionsByFilm(filmID uint) ([]models.Session, error) {
 	return sessions, nil
 }
 
+// Получить свободные места
 func GetAvailableSeats(sessionID uint) ([]SeatDTO, error) {
 	// 1. Находим сеанс с залом
 	var session models.Session
@@ -112,25 +114,28 @@ func GetAvailableSeats(sessionID uint) ([]SeatDTO, error) {
 
 // ____________________________________________________ADMIN_ONLY____________________________________________________
 // Создать сеанс
-func CreateSession(filmID, hallID uint, start time.Time, price float64) (*models.Session, error) {
+// CreateSession создает новый сеанс
+func CreateSession(input dt.CreateSessionDTI) (*dt.CreateSessionDTO, error) {
 	// Проверка даты и цены
-	if start.Before(time.Now()) {
+	if input.Start.Before(time.Now()) {
 		return nil, errors.New("нельзя создать сеанс в прошлом")
 	}
-	if price <= 0 {
+	if input.Price <= 0 {
 		return nil, errors.New("цена должна быть больше нуля")
 	}
 
 	session := models.Session{
-		FilmID:    filmID,
-		HallID:    hallID,
-		StartTime: start,
-		Price:     price,
+		FilmID:    input.FilmID,
+		HallID:    input.HallID,
+		StartTime: input.Start,
+		Price:     input.Price,
 	}
+
 	if err := db.DB.Create(&session).Error; err != nil {
 		return nil, err
 	}
-	return &session, nil
+
+	return &dt.CreateSessionDTO{ID: session.ID}, nil
 }
 
 // Обновить сеанс (частично)

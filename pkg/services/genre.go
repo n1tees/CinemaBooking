@@ -2,6 +2,7 @@ package services
 
 import (
 	"CinemaBooking/pkg/db"
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/models"
 	"errors"
 )
@@ -17,18 +18,21 @@ func GetAllGenres() ([]models.Genre, error) {
 
 // ____________________________________________________ADMIN_ONLY____________________________________________________
 // Создать жанр
-func CreateGenre(genre *models.Genre) error {
-
+func CreateGenre(input dt.CreateGenreDTI) (uint, error) {
 	var count int64
-	db.DB.Model(&models.Genre{}).Where("name = ?", genre.Name).Count(&count)
+	db.DB.Model(&models.Genre{}).Where("name = ?", input.Name).Count(&count)
 	if count > 0 {
-		return errors.New("жанр с таким названием уже существует")
+		return 0, errors.New("жанр с таким названием уже существует")
 	}
 
-	if err := db.DB.Create(genre).Error; err != nil {
-		return err
+	genre := models.Genre{
+		Name: input.Name,
 	}
-	return nil
+
+	if err := db.DB.Create(&genre).Error; err != nil {
+		return 0, err
+	}
+	return genre.ID, nil
 }
 
 // Обновить жанр

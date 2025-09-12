@@ -10,14 +10,14 @@ import (
 )
 
 // Получить история пополнения баланса
-func GetMyPayments(userID uint) (*[]models.PaymentHistory, error) {
+func GetMyPayments(userID uint) ([]models.PaymentHistory, error) {
 	var payments []models.PaymentHistory
 
 	if err := db.DB.Where("user_id = ?", userID).Find(&payments).Error; err != nil {
 		return nil, errors.New("ошибка при получении списка платежей")
 	}
 
-	return &payments, nil
+	return payments, nil
 }
 
 // Пополнить баланс

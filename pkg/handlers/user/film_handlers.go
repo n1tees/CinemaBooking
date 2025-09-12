@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/services"
 
 	"github.com/gin-gonic/gin"
@@ -15,26 +16,55 @@ import (
 // @Tags films
 // @Produce json
 // @Param id path int true "ID фильма"
-// @Success 200 {object} models.Film
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Success 200 {object} dt.FilmDTO
+// @Failure 400 {object} dt.ErrorResponse
+// @Failure 404 {object} dt.ErrorResponse
+// @Failure 500 {object} dt.ErrorResponse
 // @Router /films/{id} [get]
 func GetFilmHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid film ID"})
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "INVALID_INPUT",
+			Message: "Invalid film_id",
+		})
 		return
 	}
 
 	film, err := services.GetFilm(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "film not found"})
+		c.JSON(http.StatusNotFound, dt.ErrorResponse{
+			Code:    "NOT_FOUND",
+			Message: "film not found",
+		})
+		return
+	}
+	genresModel, err := services.GetGenresByFilm(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dt.ErrorResponse{
+			Code:    "INTERNAL_ERROR",
+			Message: err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, film)
+	var genresDTO []dt.GenreDTO
+	for _, g := range genresModel {
+		genresDTO = append(genresDTO, dt.GenreDTO{
+			Name: g.Name,
+		})
+	}
+
+	c.JSON(http.StatusOK, dt.FilmDTO{
+		Title:       film.Title,
+		Description: film.Desc,
+		AgeRating:   film.AgeRating,
+		Duration:    film.Duration,
+		ReleaseDate: film.ReleaseDate.Format("2006-01-02"),
+
+		Genres: genresDTO,
+	})
 }
 
 // GetAllFilmsHandler godoc
@@ -42,9 +72,9 @@ func GetFilmHandler(c *gin.Context) {
 // @Tags films
 // @Produce json
 // @Param genres query string false "Список ID жанров через запятую"
-// @Success 200 {array} models.Film
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Success 200 {array} dt.FilmDTO
+// @Failure 400 {object} dt.ErrorResponse
+// @Failure 500 {object} dt.ErrorResponse
 // @Router /films [get]
 func GetAllFilmsHandler(c *gin.Context) {
 	var genreIDs []uint
@@ -55,7 +85,10 @@ func GetAllFilmsHandler(c *gin.Context) {
 		for _, p := range parts {
 			val, err := strconv.ParseUint(strings.TrimSpace(p), 10, 32)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid genre ID in query"})
+				c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+					Code:    "INVALID_INPUT",
+					Message: "invalid genre ID in query",
+				})
 				return
 			}
 			genreIDs = append(genreIDs, uint(val))
@@ -64,7 +97,10 @@ func GetAllFilmsHandler(c *gin.Context) {
 
 	films, err := services.GetAllFilms(genreIDs)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dt.ErrorResponse{
+			Code:    "INTERNAL_ERROR",
+			Message: err.Error(),
+		})
 		return
 	}
 

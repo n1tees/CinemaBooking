@@ -1,65 +1,37 @@
 package main
 
 import (
-	"CinemaBooking/config"
-	"CinemaBooking/pkg/db"
-	"CinemaBooking/pkg/middleware"
+	"log"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"CinemaBooking/config"
+	"CinemaBooking/pkg/routes"
+
+	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	// "github.com/gin-gonic/gin"
-	// "github.com/gin-gonic/gin"
-	// ginSwagger "github.com/swaggo/gin-swagger"
-	// swaggerFiles "github.com/swaggo/files"
-	// "CinemaBooking/pkg/middleware"
-	// "CinemaBooking/pkg/routes"
-	// "CinemaBooking/pkg/services"
-	// _ "CinemaBooking/docs"
+
+	_ "CinemaBooking/docs" // swagger docs
 )
 
 func main() {
+	// Загружаем конфиг
 	config.LoadEnv()
 
+	// Немного подождать (если БД поднимается дольше)
 	time.Sleep(5 * time.Second)
 
-	db.InitDB()
-	defer db.CloseDB()
+	// Подключаемся к БД
+	// db.InitDB()
+	// defer db.CloseDB()
 
-	// запуск фонового обновления статусов
-	go func() {
-		for {
-			services.CheckAndUpdateStatuses()
-			time.Sleep(1 * time.Minute)
-		}
-	}()
+	// Создаём роутер
+	r := routes.SetupRouter()
 
-	r := gin.Default()
-	// r.Use(cors.New(cors.Config{
-	// 	AllowOrigins:     []string{"http://localhost:5173"},
-	// 	AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-	// 	ExposeHeaders:    []string{"Content-Length"},
-	// 	AllowCredentials: true,
-	// 	MaxAge:           12 * time.Hour,
-	// }))
-
-	// Public routes
+	// Swagger UI
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	routes.InitAuthRoutes(r)
 
-	// Protected routes
-	api := r.Group("/api")
-	api.Use(middleware.AuthRequired())
-
-	routes.InitRaceRoutes(api)
-	routes.InitUserRoutes(api)
-	routes.InitTrackRoutes(api)
-	routes.InitKartodromRoutes(api)
-	routes.InitPaymentRoutes(api)
-	routes.InitBookingRoutes(api)
-	routes.InitKartBookingRoutes(api)
-	routes.InitKartRoutes(api)
-
-	r.Run() // запускает на :8080
+	// Запуск сервера
+	if err := r.Run(":8080"); err != nil {
+		log.Fatalf("Ошибка запуска сервера: %v", err)
+	}
 }

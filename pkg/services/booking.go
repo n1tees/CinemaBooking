@@ -2,6 +2,7 @@ package services
 
 import (
 	"CinemaBooking/pkg/db"
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/models"
 	"errors"
 
@@ -9,22 +10,14 @@ import (
 )
 
 // Забронировать билет
-func CreateBooking(userID, sessionID, row, seat uint, spendBonus float64) (*models.Booking, error) {
+func CreateBooking(input dt.CreateBookingDTI) (*models.Booking, error) {
 	var booking models.Booking
 
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
-		// 1. Проверка занятости места
-		taken, err := isSeatTaken(tx, sessionID, row, seat)
-		if err != nil {
-			return err
-		}
-		if taken {
-			return errors.New("место уже занято")
-		}
 
-		// 2. Загружаем пользователя и профиль
+		// 1. Загружаем пользователя и профиль
 		var user models.User
-		if err := tx.First(&user, userID).Error; err != nil {
+		if err := tx.First(&user, input.UserID).Error; err != nil {
 			return errors.New("пользователь не найден")
 		}
 		var profile models.Profile
@@ -32,43 +25,59 @@ func CreateBooking(userID, sessionID, row, seat uint, spendBonus float64) (*mode
 			return errors.New("профиль не найден")
 		}
 
-		// 3. Проверяем бонусы
-		if profile.Bonus < int(spendBonus) {
-			return errors.New("недостаточно бонусов")
+		// 2. Проверка занятости места
+		taken, err := isSeatTaken(tx, input.SessionID, input.RowNum, input.SeatNum)
+		if err != nil {
+			return err
+		}
+		if taken {
+			return errors.New("место занято")
 		}
 
-		// 4. Загружаем сеанс
+		// 3. Загружаем сеанс
 		var session models.Session
-		if err := tx.First(&session, sessionID).Error; err != nil {
+		if err := tx.First(&session, input.SessionID).Error; err != nil {
 			return errors.New("сеанс не найден")
 		}
+		var ReceivedBonus, SpendBonus, TotalPrice float64
 
-		// 5. Считаем стоимость и бонусы
-		totalPrice := session.Price - spendBonus
-		if totalPrice < 0 {
-			totalPrice = 0
+		if input.UseBonus {
+
+			ReceivedBonus = 0.0
+
+			if profile.Bonus > session.Price {
+				SpendBonus = session.Price
+				TotalPrice = 0.0
+			} else {
+				TotalPrice = session.Price - profile.Bonus
+				SpendBonus = profile.Bonus
+			}
+		} else {
+
+			ReceivedBonus = session.Price * 0.1
+			TotalPrice = session.Price
+			SpendBonus = 0.0
 		}
-		receivedBonus := totalPrice * 0.1
 
 		// 6. Обновляем баланс пользователя
 		if err := tx.Model(&profile).
-			Update("bonus", gorm.Expr("bonus - ? + ?", spendBonus, receivedBonus)).Error; err != nil {
+			Update("bonus", gorm.Expr("bonus - ? + ?", SpendBonus, ReceivedBonus)).Error; err != nil {
 			return err
 		}
 		if err := tx.Model(&profile).
-			Update("balance", gorm.Expr("balance - ?", totalPrice)).Error; err != nil {
+			Update("balance", gorm.Expr("balance - ?", TotalPrice)).Error; err != nil {
 			return err
 		}
 
 		// 7. Создаём запись о бронировании
 		booking = models.Booking{
-			SessionID:     sessionID,
-			CustomerID:    userID,
-			RowNum:        row,
-			SeatNum:       seat,
-			SpendBonus:    spendBonus,
-			ReceivedBonus: receivedBonus,
-			TotalPrice:    totalPrice,
+			SessionID:     input.SessionID,
+			CustomerID:    input.UserID,
+			RowNum:        input.RowNum,
+			SeatNum:       input.SeatNum,
+			SpendBonus:    SpendBonus,
+			ReceivedBonus: ReceivedBonus,
+			TotalPrice:    TotalPrice,
 			Status:        models.BookingPaid,
 		}
 		if err := tx.Create(&booking).Error; err != nil {
@@ -76,10 +85,10 @@ func CreateBooking(userID, sessionID, row, seat uint, spendBonus float64) (*mode
 		}
 
 		// 8. Записываем историю оплат
-		if totalPrice > 0 {
+		if TotalPrice > 0 {
 			payment := models.PaymentHistory{
-				UserID:    userID,
-				Amount:    -totalPrice,
+				UserID:    input.UserID,
+				Amount:    TotalPrice,
 				Operation: models.PaymentSpend,
 			}
 			if err := tx.Create(&payment).Error; err != nil {
@@ -88,20 +97,20 @@ func CreateBooking(userID, sessionID, row, seat uint, spendBonus float64) (*mode
 		}
 
 		// 9. Записываем историю бонусов (раздельно списание и начисление)
-		if spendBonus > 0 {
+		if SpendBonus > 0 {
 			bonusSpend := models.BonusHistory{
-				UserID:    userID,
-				Amount:    -int(spendBonus),
+				UserID:    input.UserID,
+				Amount:    SpendBonus,
 				Operation: models.BonusRedeem,
 			}
 			if err := tx.Create(&bonusSpend).Error; err != nil {
 				return err
 			}
 		}
-		if receivedBonus > 0 {
+		if ReceivedBonus > 0 {
 			bonusEarn := models.BonusHistory{
-				UserID:    userID,
-				Amount:    int(receivedBonus),
+				UserID:    input.UserID,
+				Amount:    ReceivedBonus,
 				Operation: models.BonusEarn,
 			}
 			if err := tx.Create(&bonusEarn).Error; err != nil {
@@ -122,7 +131,9 @@ func CreateBooking(userID, sessionID, row, seat uint, spendBonus float64) (*mode
 // Отменить бронирование
 func CancelBooking(bookingID, userID uint) error {
 	return db.DB.Transaction(func(tx *gorm.DB) error {
+
 		var booking models.Booking
+
 		if err := tx.First(&booking, bookingID).Error; err != nil {
 			return errors.New("бронирование не найдено")
 		}
@@ -163,20 +174,54 @@ func CancelBooking(bookingID, userID uint) error {
 		}
 
 		// Снимаем бонусы, которые начислялись за покупку
-		if booking.ReceivedBonus > 0 && profile.Bonus >= int(booking.ReceivedBonus) {
-			if err := tx.Model(&profile).
-				Update("bonus", gorm.Expr("bonus - ?", booking.ReceivedBonus)).Error; err != nil {
-				return err
-			}
+		if booking.ReceivedBonus > 0 {
+			if profile.Bonus >= booking.ReceivedBonus {
+				// хватает бонусов → списываем бонусами
+				if err := tx.Model(&profile).
+					Update("bonus", gorm.Expr("bonus - ?", booking.ReceivedBonus)).Error; err != nil {
+					return err
+				}
 
-			// Записываем в историю бонусов
-			bonus := models.BonusHistory{
-				UserID:    booking.CustomerID,
-				Amount:    -int(booking.ReceivedBonus),
-				Operation: models.BonusRedeem,
-			}
-			if err := tx.Create(&bonus).Error; err != nil {
-				return err
+				bonus := models.BonusHistory{
+					UserID:    booking.CustomerID,
+					Amount:    booking.ReceivedBonus,
+					Operation: models.BonusRedeem,
+				}
+				if err := tx.Create(&bonus).Error; err != nil {
+					return err
+				}
+			} else {
+				// не хватает бонусов → остаток списываем с баланса
+				missing := booking.ReceivedBonus - profile.Bonus
+
+				if err := tx.Model(&profile).Updates(map[string]interface{}{
+					"bonus":   0, // все бонусы обнуляем
+					"balance": gorm.Expr("balance - ?", missing),
+				}).Error; err != nil {
+					return err
+				}
+
+				// История по бонусам
+				if profile.Bonus > 0 {
+					bonus := models.BonusHistory{
+						UserID:    booking.CustomerID,
+						Amount:    profile.Bonus,
+						Operation: models.BonusRedeem,
+					}
+					if err := tx.Create(&bonus).Error; err != nil {
+						return err
+					}
+				}
+
+				// История по балансу (добор недостающих бонусов)
+				payment := models.PaymentHistory{
+					UserID:    booking.CustomerID,
+					Amount:    missing,
+					Operation: models.PaymentSpend, // или отдельный тип, например PaymentAdjustment
+				}
+				if err := tx.Create(&payment).Error; err != nil {
+					return err
+				}
 			}
 		}
 

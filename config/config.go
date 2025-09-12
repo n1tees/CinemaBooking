@@ -19,11 +19,7 @@ func LoadEnv() {
 	}
 
 	_, statErr := os.Stat(envPath)
-	if os.IsNotExist(statErr) {
-		log.Fatalf(".env файл не найден по пути: %s", absPath)
-	} else if statErr != nil {
-		log.Fatalf("Ошибка при попытке доступа к .env: %v", statErr)
-	} else {
+	if !os.IsNotExist(statErr) {
 		log.Printf(".env файл найден по пути: %s\n", absPath)
 	}
 

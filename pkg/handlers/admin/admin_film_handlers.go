@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"CinemaBooking/pkg/models"
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/services"
 
 	"github.com/gin-gonic/gin"
@@ -16,26 +16,34 @@ import (
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param input body models.Film true "Фильм"
-// @Success 201 {object} models.Film
-// @Failure 400 {object} map[string]string
-// @Failure 401 {object} map[string]string
-// @Failure 403 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Param input body dt.CreateFilmDTI true "Фильм"
+// @Success 201 {object} dt.CreateFilmDTO
+// @Failure 400 {object} dt.ErrorResponse
+// @Failure 401 {object} dt.ErrorResponse
+// @Failure 403 {object} dt.ErrorResponse
+// @Failure 500 {object} dt.ErrorResponse
 // @Router /admin/films [post]
 func CreateFilmHandler(c *gin.Context) {
-	var film models.Film
-	if err := c.ShouldBindJSON(&film); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var input dt.CreateFilmDTI
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "INVALID_INPUT",
+			Message: err.Error(),
+		})
 		return
 	}
 
-	if err := services.CreateFilm(&film); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	dto, err := services.CreateFilm(input)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dt.ErrorResponse{
+			Code:    "INTERNAL_ERROR",
+			Message: err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, film)
+	// возвращаем только ID
+	c.JSON(http.StatusCreated, dto)
 }
 
 // UpdateFilmHandler godoc
@@ -45,33 +53,44 @@ func CreateFilmHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "ID фильма"
-// @Param input body map[string]interface{} true "Поля для обновления"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Failure 401 {object} map[string]string
-// @Failure 403 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Param input body object true "Поля для обновления"
+// @Success 200 {object} dt.ServAnswerDTO
+// @Failure 400 {object} dt.ErrorResponse
+// @Failure 401 {object} dt.ErrorResponse
+// @Failure 403 {object} dt.ErrorResponse
+// @Failure 500 {object} dt.ErrorResponse
 // @Router /admin/films/{id} [patch]
 func UpdateFilmHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid film ID"})
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "NOT_FOUND",
+			Message: "film ID not found",
+		})
 		return
 	}
 
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "INVALID_INPUT",
+			Message: err.Error(),
+		})
 		return
 	}
 
 	if err := services.UpdateFilm(uint(id), updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "INTERNAL_ERROR",
+			Message: err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "фильм обновлён"})
+	c.JSON(http.StatusOK, dt.ServAnswerDTO{
+		Answer: "фильм обновлён",
+	})
 }
 
 // DeleteFilmHandler godoc
@@ -90,12 +109,18 @@ func DeleteFilmHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid film ID"})
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "INVALID_INPUT",
+			Message: "invalid film ID",
+		})
 		return
 	}
 
 	if err := services.DeleteFilm(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "INTERNAL_ERROR",
+			Message: err.Error(),
+		})
 		return
 	}
 

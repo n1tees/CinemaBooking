@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/services"
 
 	"github.com/gin-gonic/gin"
@@ -14,48 +15,46 @@ import (
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-//
-//	@Param input body struct {
-//	  SessionID  uint    `json:"session_id" binding:"required"`
-//	  Row        uint    `json:"row" binding:"required"`
-//	  Seat       uint    `json:"seat" binding:"required"`
-//	  SpendBonus float64 `json:"spend_bonus"`
-//	} true "Данные для бронирования"
-//
-// @Success 201 {object} models.Booking
-// @Failure 400 {object} map[string]string
-// @Failure 401 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Param input body dt.CreateBookingDTI true "Данные для бронирования"
+// @Success 201 {object} dt.CreateBookingDTO
+// @Failure 400 {object} dt.ErrorResponse
+// @Failure 401 {object} dt.ErrorResponse
+// @Failure 500 {object} dt.ErrorResponse
 // @Router /bookings [post]
 func CreateBookingHandler(c *gin.Context) {
+	var input dt.CreateBookingDTI
+
 	userID, ok := c.Get("user_id")
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found in context"})
+		c.JSON(http.StatusUnauthorized, dt.ErrorResponse{
+			Code:    "NOT_FOUND",
+			Message: "User not found",
+		})
 		return
 	}
 
-	var input struct {
-		SessionID  uint    `json:"session_id" binding:"required"`
-		Row        uint    `json:"row" binding:"required"`
-		Seat       uint    `json:"seat" binding:"required"`
-		SpendBonus float64 `json:"spend_bonus"`
-	}
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dt.ErrorResponse{
+			Code:    "INVALID_INPUT",
+			Message: err.Error(),
+		})
 		return
 	}
 
-	booking, err := services.CreateBooking(
-		userID.(uint),
-		input.SessionID,
-		input.Row,
-		input.Seat,
-		input.SpendBonus,
-	)
+	input.UserID = userID.(uint)
+	booking, err := services.CreateBooking(input)
+
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dt.ErrorResponse{
+			Code:    "INTERNAL_ERROR",
+			Message: err.Error(),
+		})
+
 		return
 	}
 
-	c.JSON(http.StatusCreated, booking)
+	c.JSON(http.StatusCreated, dt.CreateBookingDTO{
+		ID:     booking.ID,
+		Status: booking.Status,
+	})
 }

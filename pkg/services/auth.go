@@ -11,33 +11,17 @@ import (
 
 	"CinemaBooking/config"
 	"CinemaBooking/pkg/db"
+	"CinemaBooking/pkg/dt"
+
 	"CinemaBooking/pkg/models"
 )
 
-// Структура данных для создания
-type RegisterInput struct {
-	FirstName      string    `json:"first name"`
-	SecondName     string    `json:"second name"`
-	Phone          string    `json:"phone"`
-	Email          string    `json:"email"`
-	BirthDay       string    `json:"birthday"`
-	Login          string    `json:"login"`
-	Password       string    `json:"password"`
-	ParsedBirthDay time.Time `json:"-"`
-}
-
-// Cтруктура данных для атворизации
-type LoginInput struct {
-	Login    string
-	Password string
-}
-
 // Создать пользователя
-func RegUser(input RegisterInput) (uint, error) {
+func RegUser(input dt.RegisterDTI) (uint, error) {
 
 	// Проверка, что логин свободен
 	if _, err := searchAuthByLogin(input.Login); err == nil {
-		return 0, errors.New("такой логин занят")
+		return 0, errors.New("логин занят")
 	}
 
 	// Проверка, что телефон свободен
@@ -97,7 +81,7 @@ func RegUser(input RegisterInput) (uint, error) {
 }
 
 // Авторизация пользователя
-func LoginUser(input LoginInput) (string, error) {
+func LoginUser(input dt.LoginDTI) (string, error) {
 
 	var auth *models.AuthCredential
 	var err error

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 // ENUM’ы
@@ -47,24 +46,36 @@ const (
 
 // Пользователи и авторизация
 type AuthCredential struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	Login        string `gorm:"type:varchar(50);unique;not null"`
 	PasswordHash []byte `gorm:"not null"`
 }
 
 type Profile struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	FirstName  string    `gorm:"type:varchar(50);not null"`
 	SecondName string    `gorm:"type:varchar(50)"`
 	Phone      string    `gorm:"type:varchar(11);unique;not null"`
 	Email      string    `gorm:"type:varchar(50)"`
 	BirthDay   time.Time `gorm:"type:date"`
-	Balance    float64   `gorm:"type:numeric(12,2);default:0"`
-	Bonus      int       `gorm:"default:0"`
+	Balance    float64   `gorm:"type:numeric(12,2);not null"`
+	Bonus      float64   `gorm:"type:numeric(12,2);not null"`
 }
 
 type User struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	AuthID    uint
 	Auth      AuthCredential
 	ProfileID uint
@@ -74,7 +85,11 @@ type User struct {
 
 // Кинотеатры и залы
 type Cinema struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	Name     string `gorm:"type:varchar(100);not null"`
 	Location string `gorm:"type:varchar(100)"`
 	Phone    string `gorm:"type:varchar(11)"`
@@ -82,13 +97,21 @@ type Cinema struct {
 }
 
 type HallType struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	Name string `gorm:"type:varchar(50);not null"`
 	Desc string `gorm:"type:varchar(50)"`
 }
 
 type CinemaHall struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	CinemaID   uint
 	Cinema     Cinema
 	HallTypeID uint
@@ -100,13 +123,21 @@ type CinemaHall struct {
 
 // Фильмы
 type Genre struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	Name string `gorm:"type:varchar(50);not null"`
 	Desc string `gorm:"type:varchar(50)"`
 }
 
 type Film struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	Title       string `gorm:"type:varchar(50);not null"`
 	Desc        string `gorm:"type:varchar(100)"`
 	Duration    uint   // минуты
@@ -117,7 +148,11 @@ type Film struct {
 }
 
 type Poster struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	FilmID   uint `gorm:"not null;constraint:OnDelete:CASCADE;"`
 	Film     Film
 	ImageURL string `gorm:"type:varchar(100)"`
@@ -125,7 +160,11 @@ type Poster struct {
 
 // Сеансы и бронирование
 type Session struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	FilmID    uint `gorm:"not null"`
 	Film      Film
 	HallID    uint `gorm:"not null"`
@@ -135,14 +174,15 @@ type Session struct {
 }
 
 type Booking struct {
-	ID         uint `gorm:"primaryKey"`
-	SessionID  uint `gorm:"not null"`
+	ID uint `gorm:"primaryKey"`
+
+	SessionID  uint `gorm:"not null;index:idx_seat,unique"`
 	Session    Session
 	CustomerID uint `gorm:"not null"`
 	Customer   User
 
-	RowNum  uint `gorm:"not null"` // номер ряда
-	SeatNum uint `gorm:"not null"` // номер места
+	RowNum  uint `gorm:"not null;index:idx_seat,unique"`
+	SeatNum uint `gorm:"not null;index:idx_seat,unique"`
 
 	SpendBonus    float64 `gorm:"type:numeric(12,2);default:0"`
 	ReceivedBonus float64 `gorm:"type:numeric(12,2);default:0"`
@@ -153,7 +193,11 @@ type Booking struct {
 
 // Финансы
 type PaymentHistory struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	UserID    uint
 	User      User
 	Amount    float64          `gorm:"type:numeric(12,2)"`
@@ -162,10 +206,14 @@ type PaymentHistory struct {
 }
 
 type BonusHistory struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	UserID    uint
 	User      User
-	Amount    int
+	Amount    float64        `gorm:"type:numeric(12,2);not null"`
 	Desc      string         `gorm:"type:varchar(50)"`
 	Operation BonusOperation `gorm:"type:varchar(20);not null"`
 }
@@ -176,7 +224,11 @@ type FilmGenre struct {
 }
 
 type Review struct {
-	gorm.Model
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+
 	FilmID uint
 	Film   Film
 	UserID uint

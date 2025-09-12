@@ -2,8 +2,11 @@ package services
 
 import (
 	"CinemaBooking/pkg/db"
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/models"
 	"errors"
+	"fmt"
+	"time"
 )
 
 // Получить конкретный фильм
@@ -40,11 +43,38 @@ func GetAllFilms(genres []uint) ([]models.Film, error) {
 
 // ____________________________________________________ADMIN_ONLY____________________________________________________
 // Создать фильм
-func CreateFilm(film *models.Film) error {
-	if err := db.DB.Create(film).Error; err != nil {
-		return err
+func CreateFilm(input dt.CreateFilmDTI) (*dt.CreateFilmDTO, error) {
+	// парсим дату
+	releaseDate, err := time.Parse("2006-01-02", input.ReleaseDate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid release_date format: %w", err)
 	}
-	return nil
+
+	// собираем модель фильма
+	film := models.Film{
+		Title:       input.Title,
+		Desc:        input.Description,
+		Duration:    input.Duration,
+		AgeRating:   input.AgeRating,
+		ReleaseDate: releaseDate,
+	}
+
+	// подтягиваем жанры, если есть
+	if len(input.Genres) > 0 {
+		var genres []models.Genre
+		if err := db.DB.Find(&genres, input.Genres).Error; err != nil {
+			return nil, fmt.Errorf("ошибка загрузки жанров: %w", err)
+		}
+		film.Genres = genres
+	}
+
+	// сохраняем фильм
+	if err := db.DB.Create(&film).Error; err != nil {
+		return nil, err
+	}
+
+	// возвращаем только ID
+	return &dt.CreateFilmDTO{ID: film.ID}, nil
 }
 
 // Обновить фильм

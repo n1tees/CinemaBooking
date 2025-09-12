@@ -2,6 +2,7 @@ package services
 
 import (
 	"CinemaBooking/pkg/db"
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/models"
 	"errors"
 )
@@ -19,14 +20,17 @@ func GetAllPosters() ([]models.Poster, error) {
 
 // ____________________________________________________ADMIN_ONLY____________________________________________________
 // Создать афишу
-func CreatePoster(poster *models.Poster) error {
-
-	if err := db.DB.Create(poster).Error; err != nil {
-		return err
+func CreatePoster(input dt.CreatePosterDTI) (*dt.CreatePosterDTO, error) {
+	poster := models.Poster{
+		FilmID:   input.FilmID,
+		ImageURL: input.ImageURL,
 	}
 
-	return nil
+	if err := db.DB.Create(&poster).Error; err != nil {
+		return nil, err
+	}
 
+	return &dt.CreatePosterDTO{ID: poster.ID}, nil
 }
 
 // Изменить афишу

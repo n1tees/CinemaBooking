@@ -2,6 +2,7 @@ package services
 
 import (
 	"CinemaBooking/pkg/db"
+	"CinemaBooking/pkg/dt"
 	"CinemaBooking/pkg/models"
 
 	"golang.org/x/crypto/bcrypt"
@@ -9,13 +10,6 @@ import (
 
 	"errors"
 )
-
-// Стуктура ввода для смены пароля
-type ChangePasswordInput struct {
-	OldPassword string `json:"old_password" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required"`
-	RepeatNew   string `json:"repeat_new_password" binding:"required"`
-}
 
 // Зайти в свой профиль
 func GetUserInfo(userID uint) (*models.Profile, error) {
@@ -39,7 +33,7 @@ func GetUserInfo(userID uint) (*models.Profile, error) {
 }
 
 // Изменить пароль
-func ChangePassword(userID uint, input ChangePasswordInput) error {
+func ChangePassword(userID uint, input dt.ChangePasswordDTI) error {
 
 	// Находим пользователя
 	user, err := searchUserByID(userID)
